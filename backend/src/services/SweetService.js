@@ -1,4 +1,4 @@
-/*
+
 const sweets=[];
 let currentId=1;
 
@@ -18,4 +18,3 @@ class SweetService{
 }
 
 module.exports=SweetService;
-*/
