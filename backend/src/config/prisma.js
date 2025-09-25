@@ -1,5 +1,12 @@
-const {PrismaClient}=require('@prisma/client');
+const { PrismaClient } = require('@prisma/client');
 
-const prisma=new PrismaClient();
+// This singleton pattern prevents creating multiple Prisma Client instances.
+// It checks if an instance already exists in the global scope, and if not, creates one.
+const prisma = global.prisma || new PrismaClient();
 
-module.exports=prisma;
+if (process.env.NODE_ENV !== 'production') {
+  global.prisma = prisma;
+}
+
+module.exports = prisma;
+

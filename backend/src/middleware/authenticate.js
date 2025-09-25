@@ -1,7 +1,7 @@
 const jwt=require('jsonwebtoken');
 const prisma=require('../config/prisma');
 
-const authenticate=async(req,resizeBy,next)=>{
+const authenticate=async(req,res,next)=>{
     const authHeader=req.headers.authorization;
 
     if(!authHeader || !authHeader.startsWith('Bearer')){
