@@ -12,7 +12,7 @@ class SweetService{
         sweets.push(newSweet);
         return newSweet;
     }
-    getAllSweete(){
+    getAllSweets(){
         return sweets;
     }
 }
