@@ -1,126 +1,101 @@
-import React, { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../contexts/AuthContext';
-import { apiService } from '../services/apiService';
-import { styles } from '../styles/styles';
-import SweetCard from '../components/SweetCard';
-import SweetFormModal from '../components/SweetFormModal';
+import { useEffect, useState } from "react";
+import axios from "axios";
 
-const Dashboard = () => {
-    const { user, token, logout } = useContext(AuthContext);
-    const [sweets, setSweets] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingSweet, setEditingSweet] = useState(null);
+export default function Dashboard() {
+  const [sweets, setSweets] = useState([]);
+  const [search, setSearch] = useState("");
+  const token = localStorage.getItem("token");
 
-    const isAdmin = user?.role === 'ADMIN';
+  const fetchSweets = async () => {
+    try {
+      const res = await axios.get("http://localhost:5000/api/sweets", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSweets(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    // Function to fetch sweets from the backend
-    const fetchSweets = async () => {
-      try {
-        setIsLoading(true);
-        setError('');
-        const data = await apiService.getSweets(token);
-        setSweets(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const handleSearch = async () => {
+    if (!search) return fetchSweets();
+    try {
+      const res = await axios.get(`http://localhost:5000/api/sweets/search?q=${search}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSweets(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
-    // Fetch sweets when the component mounts or the token changes
-    useEffect(() => {
-      if (token) {
-        fetchSweets();
-      }
-    }, [token]);
+  useEffect(() => {
+    fetchSweets();
+  }, []);
 
-    const handlePurchase = async (sweetId) => {
-        try {
-            await apiService.purchaseSweet(sweetId, 1, token);
-            alert('Purchase successful!');
-            fetchSweets(); // Re-fetch to update the quantity
-        } catch (error) {
-            alert(`Purchase Error: ${error.message}`);
-        }
-    };
-
-    const handleOpenModal = (sweet = null) => {
-        setEditingSweet(sweet);
-        setIsModalOpen(true);
-    };
-
-    const handleCloseModal = () => {
-        setIsModalOpen(false);
-        setEditingSweet(null);
-    };
-
-    const handleSaveSweet = async (sweetData, authToken) => {
-        const action = sweetData.id
-            ? apiService.updateSweet(sweetData.id, sweetData, authToken)
-            : apiService.addSweet(sweetData, authToken);
-
-        await action;
-        fetchSweets(); // Refresh list after saving
-    };
-
-    const handleDeleteSweet = async (sweetId) => {
-        if (window.confirm('Are you sure you want to delete this sweet?')) {
-            try {
-                await apiService.deleteSweet(sweetId, token);
-                fetchSweets(); // Refresh the list
-            } catch (error) {
-                alert(`Deletion Error: ${error.message}`);
-            }
-        }
-    };
-
-    return (
-      <div className={styles.container}>
-        <header className={styles.header}>
-          <h1 className="text-4xl font-bold">Sweet Shop</h1>
-          <div>
-            <span className="mr-4">Welcome, {user?.email}!</span>
-            <button onClick={logout} className="bg-white text-pink-500 hover:bg-pink-100 font-bold py-2 px-4 rounded-lg">
-              Logout
-            </button>
-          </div>
-        </header>
-
-        {isAdmin && (
-          <div className="mb-8 text-center">
-            <button onClick={() => handleOpenModal()} className={styles.button}>
-              + Add New Sweet
-            </button>
-          </div>
-        )}
-
-        {isLoading && <p className="text-center text-xl">Loading sweets...</p>}
-        {error && <p className="text-center text-red-500 bg-red-100 p-4 rounded-lg">{error}</p>}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-          {!isLoading && sweets.map(sweet => (
-            <SweetCard
-              key={sweet.id}
-              sweet={sweet}
-              onPurchase={handlePurchase}
-              isAdmin={isAdmin}
-              onEdit={handleOpenModal}
-              onDelete={handleDeleteSweet}
-            />
-          ))}
-        </div>
-
-        {isModalOpen && (
-            <SweetFormModal
-                sweet={editingSweet}
-                onClose={handleCloseModal}
-                onSave={handleSaveSweet}
-            />
-        )}
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-yellow-50 to-red-50 p-8">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">🍭 Sweet Shop Dashboard</h1>
+        <button
+          className="bg-red-500 text-white px-4 py-2 rounded-lg"
+          onClick={() => {
+            localStorage.removeItem("token");
+            window.location.href = "/login";
+          }}
+        >
+          Logout
+        </button>
       </div>
-    );
-};
 
-export default Dashboard;
+      <div className="flex mb-6">
+        <input
+          type="text"
+          placeholder="Search sweets..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="flex-1 px-3 py-2 border rounded-l-lg"
+        />
+        <button
+          onClick={handleSearch}
+          className="bg-pink-500 text-white px-4 rounded-r-lg"
+        >
+          Search
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {sweets.map((sweet) => (
+          <div key={sweet.id} className="bg-white p-4 rounded-2xl shadow hover:shadow-xl transition">
+            <img
+              src={sweet.imageUrl || "https://via.placeholder.com/200"}
+              alt={sweet.name}
+              className="w-full h-40 object-cover rounded-lg mb-3"
+            />
+            <h3 className="text-xl font-semibold">{sweet.name}</h3>
+            <p className="text-gray-600">{sweet.category}</p>
+            <p className="mt-2 font-bold text-pink-600">${sweet.price.toFixed(2)}</p>
+            <p className="text-sm text-gray-500">Stock: {sweet.quantity}</p>
+            <button
+              className="mt-3 w-full bg-yellow-400 hover:bg-yellow-500 text-white py-2 rounded-lg"
+              onClick={async () => {
+                try {
+                  await axios.post(
+                    `http://localhost:5000/api/sweets/${sweet.id}/purchase`,
+                    { quantity: 1 },
+                    { headers: { Authorization: `Bearer ${token}` } }
+                  );
+                  fetchSweets();
+                } catch (err) {
+                  alert(err.response?.data?.message || "Purchase failed");
+                }
+              }}
+            >
+              Buy 1
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
